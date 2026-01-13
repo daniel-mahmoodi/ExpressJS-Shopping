@@ -10,7 +10,8 @@ const storage = multer.diskStorage({
     cb(null, "public/blog/");
   },
   filename: (req, file, cb) => {
-    cb(null, new Date().toISOString() + "-" + file.originalname);
+    const safeDate = new Date().toISOString().replace(/:/g, "-");
+    cb(null, safeDate + "-" + file.originalname);
   },
 });
 const upload = multer({ storage: storage });
@@ -60,9 +61,12 @@ router.delete("/:id", async (req, res) => {
 });
 router.use(express.json());
 router.post("/", upload.single("image"), async (req, res) => {
+
   const { filename } = req.file;
-  const { title, content, categoryId } = req.body;
-  console.log(content, title);
+  if (!filename) {
+    res.status(400).send(error.message);
+    return;
+  }
   const blogSchema = Joi.object({
     title: Joi.string().required(),
     content: Joi.string().required(),
