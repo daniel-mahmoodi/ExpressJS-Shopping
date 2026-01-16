@@ -22,8 +22,15 @@ app.use("/users", users);
 app.use((req, res) => {
   res.status(404).send("Page not found");
 });
+
+// categories and blogs relations:
 Blog.belongsTo(Category);
 Category.hasMany(Blog);
+
+// users and blogs relations:
+Blog.belongsTo(User);
+User.hasMany(Blog);
+
 const startServer = async () => {
   try {
     // await database.sync({ force: true });
