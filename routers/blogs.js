@@ -5,6 +5,7 @@ const { Op } = require("sequelize");
 const Blog = require("../models/blog");
 const Category = require("../models/category");
 const multer = require("multer");
+const User = require("../models/user");
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "public/blog/");
@@ -17,7 +18,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 router.get("/", async (req, res) => {
   let queryObject = {};
-  const { title, categoryId, page, qty } = req.query;
+  const { title, categoryId, userId, page, qty } = req.query;
 
   if (title) {
     queryObject.title = { [Op.like]: `%${title}%` };
@@ -25,6 +26,11 @@ router.get("/", async (req, res) => {
   if (categoryId) {
     queryObject.categoryId = categoryId;
   }
+
+  if (userId) {
+    queryObject.userId = userId;
+  }
+
   const currentPage = page ? page : 1;
   const limit = qty ? qty : 2;
 
@@ -42,7 +48,9 @@ router.get("/", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const blog = await Blog.findByPk(req.params.id, { include: Category });
+  const blog = await Blog.findByPk(req.params.id, {
+    include: [Category, User],
+  });
   if (!blog) {
     res.status(404).send("blog not found");
   }
@@ -61,23 +69,26 @@ router.delete("/:id", async (req, res) => {
 });
 router.use(express.json());
 router.post("/", upload.single("image"), async (req, res) => {
-
+  console.log("------------------", req);
   const { filename } = req.file;
   if (!filename) {
     res.status(400).send(error.message);
     return;
   }
+  const { title, content, categoryId, userId } = req.body;
   const blogSchema = Joi.object({
     title: Joi.string().required(),
     content: Joi.string().required(),
     image: Joi.string().required(),
     categoryId: Joi.string().required(),
+    userId: Joi.string().required(),
   });
   const { error } = blogSchema.validate({
     title: title,
     content: content,
     image: filename,
     categoryId: categoryId,
+    userId: userId,
   });
   if (error) {
     res.status(400).send(error.message);
@@ -88,6 +99,8 @@ router.post("/", upload.single("image"), async (req, res) => {
       title: title,
       content: content,
       categoryId: categoryId,
+      image: filename,
+      userId: userId,
     });
 
     res.status(201).send(newBlog);
