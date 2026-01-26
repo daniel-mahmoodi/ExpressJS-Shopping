@@ -3,6 +3,7 @@ const router = express.Router();
 const Joi = require("joi");
 const { Op } = require("sequelize");
 const User = require("../models/user");
+const bcrypt = require("bcrypt");
 
 router.get("/", async (req, res) => {
   let queryObject = {};
@@ -67,13 +68,14 @@ router.post("/", async (req, res) => {
     return;
   }
   try {
-    const newBlog = await User.create({
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await User.create({
       mobile: mobile,
       name: name,
-      password: password,
+      password: hashedPassword,
     });
-
-    res.status(201).send(newBlog);
+    const userNoPass = { ...newUser.toJSON(), password: null };
+    res.status(201).send(userNoPass);
   } catch (error) {
     let errorMessage = error.message;
     if (error.errors) {
@@ -102,18 +104,21 @@ router.put("/:id", async (req, res) => {
     name: name,
     password: password,
   });
+
   if (error) {
     res.status(400).send(error.message);
     return;
   }
+
   try {
+    const hashedPassword = await bcrypt.hash(password, 10);
     await user.update({
       mobile: mobile,
       name: name,
-      password: password,
+      password: hashedPassword,
     });
-
-    res.status(201).send(user);
+    const userNoPass = { ...user.toJSON(), password: null };
+    res.status(201).send(userNoPass);
   } catch (error) {
     let errorMessage = error.message;
     if (error.errors) {
@@ -123,5 +128,16 @@ router.put("/:id", async (req, res) => {
     }
     res.status(400).send(errorMessage);
   }
+
+  router.delete("/:id", async (req, res) => {
+    const user = await User.findByPk(req.params.id);
+
+    if (!user) {
+      res.status(404).send("user not found");
+      return;
+    }
+    user.destroy();
+    res.send(`user with ID ${user.id} deleted`);
+  });
 });
 module.exports = router;
