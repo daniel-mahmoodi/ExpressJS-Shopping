@@ -69,7 +69,7 @@ router.delete("/:id", async (req, res) => {
 });
 router.use(express.json());
 router.post("/", upload.single("image"), async (req, res) => {
-  console.log("------------------", req);
+
   const { filename } = req.file;
   if (!filename) {
     res.status(400).send(error.message);
